@@ -2,8 +2,12 @@
 #include <fstream>
 #include <sstream>
 #include <armadillo>
+#include <math.h>
 
 #include "lj.h"
+
+using namespace arma;
+
 
 LJ::LJ(std::string path)
     : _file_path(path)
@@ -20,7 +24,6 @@ void LJ::read_data(std::string f_path) {
 
     data_file.open(f_path);
     getline(data_file,line,'\n');
-    std::cout << "line: " << line << std::endl;
 
     //save the number of atoms in the cluster
     _num_atoms = std::stoi(line);
@@ -41,9 +44,6 @@ void LJ::read_data(std::string f_path) {
             exit(1);
         }
 
-        //skip atomic number
-        // getline(ss,s,' ');
-
         for(int j = 0; j < 3; j++)
         {
             //gather & save x,y,z coordinates
@@ -54,13 +54,147 @@ void LJ::read_data(std::string f_path) {
     }
 }
 
-float LJ::calc_distance(int a, int b) {
-    return _s(a) - _s(b);
+float LJ::calc_distance(int i, int j) {
+    rowvec result = _s.row(i) - _s.row(j);
+    return sqrt(pow(result(0),2) + pow(result(1),2) + pow(result(2),2));
+}
+
+float LJ::calc_potential(int i, int j, float h) {
+    float r = calc_distance(i,j) + h;
+    float repel = pow((_sigma/r),12);
+    float attract = pow((_sigma/r),6);
+    return _epsilon *(repel - 2 * attract);
+}
+
+float LJ::calc_total_potential(float h) {
+    float total_energy = 0;
+    for(int i = 0; i < _num_atoms; i++) {
+        for(int j = 0; j < _num_atoms; j++) {
+            if(i != j) {
+                total_energy += calc_potential(i, j, h);
+            }
+        }
+    }
+    return .5 * total_energy;
+}
+
+// float LJ::calc_analytical_force(int i, int j) {
+//     float r = calc_distance(i,j);
+//     float repel = pow((_sigma/r),13);
+//     float attract = (pow((_sigma/r),7));
+//     return 24 * _epsilon * (2*repel - attract);
+// }
+
+// rowvec LJ::unit_vector(int i, int j) {
+//     rowvec displacement = _s.row(i) - _s.row(j);
+//     float dist = calc_distance(i, j);
+//     return displacement / dist;
+// }
+
+// mat LJ::analytical_force_on_system() {
+//     mat force_matrix(3,_num_atoms);
+//     for(int i = 0; i < _num_atoms; i++) {
+//         for(int j = 0; j < _num_atoms; j++) {
+//             if(i != j) {
+//                 rowvec force = calc_analytical_force(i,j) * unit_vector(i,j);
+//                 force_matrix.col(i) = force.t();
+//             }
+//         }
+//     }
+//     force_matrix.print();
+//     return force_matrix;
+// }
+
+float LJ::direction_force(int i, int j, int dim) {
+    float direction_displacement = _s(j, dim) - _s(i, dim);
+    float dist = calc_distance(i, j);
+    return direction_displacement / dist;
+}
+
+float LJ::calc_analytical_force(int i, int j, int dim) {
+    float r = calc_distance(i, j);
+    float repel = (pow(_sigma, 12)) / (pow(r, 13));
+    float attract = (pow(_sigma, 6)) / (pow(r, 7));
+    return _epsilon * (12*repel - 12*attract) * direction_force(i, j, dim);
+}
+
+mat LJ::analytical_force_on_system() {
+    mat force_matrix(3,_num_atoms);
+    for(int i = 0; i < _num_atoms; i++) {
+        vec q(3);
+        int dim = 0; //dimension of force:
+        // 0 = x
+        // 1 = y
+        // 2 = z
+        for(int j = 0; j < _num_atoms; j++) {
+            if(i != j) {
+                q(dim) = calc_analytical_force(i, j, dim);
+                dim++;
+            }
+        }
+        force_matrix.col(i) = q;
+    }
+    force_matrix.print();
+    return force_matrix;
+}
+
+
+float LJ::forward_diff(int i, int j, float h) {
+    float energy = calc_potential(i,j);
+    float energy_increment = calc_potential(i,j,h);
+    return -(energy_increment - energy) / h;
+}
+
+mat LJ::forward_diff_on_system(float h) {
+    mat force_matrix(3,_num_atoms);
+    for(int i = 0; i < _num_atoms; i++) {
+        vec q(3);
+        int pos = 0;
+        for(int j = 0; j < _num_atoms; j++) {
+            if(i != j) {
+                q(pos) = forward_diff(i, j, h);
+                pos ++;
+            }
+        }
+        force_matrix.col(i) = q;
+    }
+    force_matrix.print();
+    std::cout << std::endl;
+    return force_matrix;
+}
+
+float LJ::central_diff(int i, int j, float h) {
+    float energy_decrement = calc_potential(i,j, -h);
+    float energy_increment = calc_potential(i,j,h);
+    return - (energy_increment - energy_decrement) / (2 * h);
+}
+
+mat LJ::central_diff_on_system(float h) {
+    mat force_matrix(3,_num_atoms);
+    for(int i = 0; i < _num_atoms; i++) {
+        vec q(3);
+        int pos = 0;
+        for(int j = 0; j < _num_atoms; j++) {
+            if(i != j) {
+                q(pos) = central_diff(i, j, h);
+                pos ++;
+            }
+        }
+        force_matrix.col(i) = q;
+    }
+    force_matrix.print();
+    std::cout << std::endl;
+    return force_matrix;
 }
 
 void LJ::print_matrix() {
     //this is so convenient omg
     _s.print();
+}
+
+void LJ::output_error_txt() {
+    float steps[4] = {0.1, 0.01, 0.001, 0.0001};
+    
 }
 
 

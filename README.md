@@ -2,7 +2,7 @@
 ## Laura Jones
 ## Chem 279 - Dr. Mayank Agrawal
 
-Last updated: 9.18.2024
+Last updated: 9.20.2024
 
 ## In This Directory
 - test/
@@ -13,22 +13,22 @@ Last updated: 9.18.2024
 
 
 ### The Lennard-Jones Energy of a Set of Atoms
-- [ ] create header file with function declarations
-- [ ] create source file
-- [ ] create makefile for easy compilation
-- [ ] create test file
+- [x] create header file with function declarations
+- [x] create source file
+- [x] create makefile for easy compilation
+- [x] create test file
 
 ----
 
-- [ ] fill in source file with code to read from .txt file
-- [ ] echo input to output, crash if there are atoms other than Au atoms
-- [ ] return energy of cluster
+- [x] fill in source file with code to read from .txt file
+- [x] echo input to output, crash if there are atoms other than Au atoms
+- [x] return energy of cluster
 
 ### Finite Difference Vs. Analytical Forces
-- [ ] work out algebra in function 2.1
-- [ ] implement the force as a function
-- [ ] implement forward difference equation
-- [ ] implement central difference equation
+- [x] work out algebra in function 2.1
+- [x] implement the force as a function
+- [x] implement forward difference equation
+- [x] implement central difference equation
     - make sure that forces match finite differences
     - step size of 0.01 Angstroms
 - [ ] look into the truncation error of the forward/central diff expressions as a function of h
