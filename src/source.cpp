@@ -78,33 +78,6 @@ float LJ::calc_total_potential(float h) {
     return .5 * total_energy;
 }
 
-// float LJ::calc_analytical_force(int i, int j) {
-//     float r = calc_distance(i,j);
-//     float repel = pow((_sigma/r),13);
-//     float attract = (pow((_sigma/r),7));
-//     return 24 * _epsilon * (2*repel - attract);
-// }
-
-// rowvec LJ::unit_vector(int i, int j) {
-//     rowvec displacement = _s.row(i) - _s.row(j);
-//     float dist = calc_distance(i, j);
-//     return displacement / dist;
-// }
-
-// mat LJ::analytical_force_on_system() {
-//     mat force_matrix(3,_num_atoms);
-//     for(int i = 0; i < _num_atoms; i++) {
-//         for(int j = 0; j < _num_atoms; j++) {
-//             if(i != j) {
-//                 rowvec force = calc_analytical_force(i,j) * unit_vector(i,j);
-//                 force_matrix.col(i) = force.t();
-//             }
-//         }
-//     }
-//     force_matrix.print();
-//     return force_matrix;
-// }
-
 float LJ::direction_force(int i, int j, int dim) {
     float direction_displacement = _s(j, dim) - _s(i, dim);
     float dist = calc_distance(i, j);
@@ -173,28 +146,49 @@ mat LJ::central_diff_on_system(float h) {
     mat force_matrix(3,_num_atoms);
     for(int i = 0; i < _num_atoms; i++) {
         vec q(3);
-        int pos = 0;
+        int pos = 2;
         for(int j = 0; j < _num_atoms; j++) {
             if(i != j) {
                 q(pos) = central_diff(i, j, h);
-                pos ++;
+                pos --;
             }
         }
         force_matrix.col(i) = q;
     }
-    force_matrix.print();
-    std::cout << std::endl;
+    // force_matrix.print();
+    // std::cout << std::endl;
     return force_matrix;
+}
+
+void LJ::golden_section(float h, float tol) {
+    //function to minimize will be 'calc_total_potential'
+    mat central_diff_matrix = central_diff_on_system(h);
+    float tau = (sqrt(5) - 1) / 2;
+
+    arma::uword dim = 0;
+    for(arma::uword col = 0; col < central_diff_matrix.n_cols; col++)
+    {
+        dim = arma::index_min(central_diff_matrix.col(col));  
+    }
+
+    float upper_bound = _s(1,dim);
+    float lower_bound = _s(0,dim);
+
+    std::cout << lower_bound << " " << upper_bound << std::endl;
+
+    float c = upper_bound - tau * (upper_bound - lower_bound);
+    float d = lower_bound + tau * (upper_bound - lower_bound);
+    std::cout << c << " " << d << std::endl;
+
+    //reset coords in matrix
+    _s(1,dim) = c;
+    _s(0,dim) = d;
+
 }
 
 void LJ::print_matrix() {
     //this is so convenient omg
     _s.print();
-}
-
-void LJ::output_error_txt() {
-    float steps[4] = {0.1, 0.01, 0.001, 0.0001};
-    
 }
 
 

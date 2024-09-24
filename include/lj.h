@@ -55,11 +55,10 @@ class LJ
 
         mat central_diff_on_system(float);
 
+        void golden_section(float, float);
 
     //debugging/output functions
         void print_matrix();
-
-        void output_error_txt();
 
 
 };
